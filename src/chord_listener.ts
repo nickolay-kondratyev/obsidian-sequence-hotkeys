@@ -25,6 +25,23 @@ export class ChordListener {
 		this.handleKeyup = (event: KeyboardEvent) => {
 			// If the chord was not handled yet, because it consists
 			// of modifiers only, handle it now.
+
+			// WHY: Electron's before-input-event hook intercepts keydown for certain
+			// key combinations (e.g. Ctrl+S) before they reach the DOM renderer,
+			// but keyup events are not intercepted. When a non-modifier keyup
+			// arrives with modifiers held and no stored keydown was seen, fall
+			// back to synthesizing the chord from the keyup event. Without this,
+			// sequence chords whose keydown is intercepted by Electron (like
+			// Ctrl+S when used as the second chord in a sequence) would be
+			// silently lost.
+			if (
+				!isModifier(event.code) &&
+				!this._lastKeydown &&
+				(event.ctrlKey || event.metaKey || event.altKey)
+			) {
+				this._lastKeydown = event;
+			}
+
 			this.chordPress(event);
 		};
 		document.addEventListener("keydown", this.handleKeydown, { capture: true });
